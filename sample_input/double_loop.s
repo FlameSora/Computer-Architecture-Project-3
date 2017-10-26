@@ -25,6 +25,7 @@ loop2:
 	sltu	$23, $5, $9
 	bne	$23, $21, tail
 	jal	loop2
+	addu	$0, $0, $0
 tail:
 	subu	$17, $5, $4
 	sw	$10, 4($25)

@@ -106,7 +106,7 @@ void initialize(char *program_filename) {
     INSTRUCTION_COUNT = 0;
     CYCLE_COUNT = 0;
     BR_BIT = TRUE;
-    FORWARDING_BIT = FALSE;
+    FORWARDING_BIT = TRUE;
 
     for (i = 0; i < PIPE_STAGE; i++){
 	CURRENT_STATE.PIPE[i] = 0;
@@ -144,7 +144,6 @@ int main(int argc, char *argv[]) {
     int debug_set = 0;
     int num_inst_set = 0;
     int pipe_dump_set = 0;
-    FORWARDING_BIT = TRUE;
 
     /* Error Checking */
     if (argc < 2)
@@ -178,7 +177,7 @@ int main(int argc, char *argv[]) {
 	else if(strcmp(argv[count], "-nof") == 0)
 	    FORWARDING_BIT = FALSE;
 	else {
-	    printf("Usage: %s [-nobp] [-nof] [-m addr1:addr2] [-d] [-p] [-n num_instr] inputBinary\n", argv[0]);
+	    printf("Usage: %s [-m addr1:addr2] [-d] [-p] [-n num_instr] inputBinary\n", argv[0]);
 	    exit(1);
 	}
 	count++;
@@ -193,7 +192,7 @@ int main(int argc, char *argv[]) {
     }
 
     if(debug_set || pipe_dump_set){
-	printf("Simulating for %llu instructions...\n\n", MAX_INSTRUCTION_NUM);
+	printf("Simulating for %lu instructions...\n\n", MAX_INSTRUCTION_NUM);
 
 	while(RUN_BIT){
 	    cycle();
@@ -203,7 +202,7 @@ int main(int argc, char *argv[]) {
 	}
 	if(!debug_set)		rdump();
 	if(mem_dump_set)	mdump(addr1, addr2);
-	printf("Simulator halted\n\n");
+        printf("Simulator halted after %lu cycles\n\n", CYCLE_COUNT);
     }
     else{
 	run();
