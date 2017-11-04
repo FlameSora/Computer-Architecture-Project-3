@@ -12,3 +12,5 @@ loop:
 
         addiu   $10, $10, 0
         addiu   $11, $11, 0
+        addiu   $12, $12, 0
+        addiu   $13, $13, 0
