@@ -54,39 +54,39 @@ void IF_Stage(){
 	CURRENT_STATE.PC = CURRENT_STATE.PC +4;
 }
 void ID_Stage(){
-	instruction* instrp; 
-	instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
-	if(CURRENT_STATE.IF_ID_NPC == 0){
-		printf ("noop");
-	}
-	else{ 
-//	instruction instr = *instrp;
-	CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID_NPC;
-	CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
-	CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.REGS[RS(instrp)];
-//	printf("RS is:%x \n",RS(instrp));
-	CURRENT_STATE.ID_EX_REG2 = CURRENT_STATE.REGS[RT(instrp)];
-	CURRENT_STATE.ID_EX_IMM = IMM(instrp);
-	if (OPCODE(instrp)  == 2){
-		CURRENT_STATE.PC = TARGET(instrp)*4;
-		CURRENT_STATE.ID_EX_DEST = 1;
-	}
-	else if(OPCODE(instrp) == 3){
-		CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+8;
-		CURRENT_STATE.PC = TARGET(instrp)*4;
-		CURRENT_STATE.ID_EX_DEST = 1;
-	}
-	else if(OPCODE(instrp) == 0 &&FUNC(instrp) == 8){
-		CURRENT_STATE.PC = CURRENT_STATE.REGS[RS(instrp)];
-		CURRENT_STATE.ID_EX_DEST = 1;
-	}
-	else{
-	//	CURRENT_STATE.PC = CURRENT_STATE.PC +4;
-		CURRENT_STATE.ID_EX_DEST = 0;
-	}
-	}
 	
-	 
+	if (CURRENT_STATE.IF_ID_NPC != 0) {
+
+		instruction* instrp; 
+		instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
+		
+	//	instruction instr = *instrp;
+		CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID_NPC;
+		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
+		CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.REGS[RS(instrp)];
+	//	printf("RS is:%x \n",RS(instrp));
+		CURRENT_STATE.ID_EX_REG2 = CURRENT_STATE.REGS[RT(instrp)];
+		CURRENT_STATE.ID_EX_IMM = IMM(instrp);
+		if (OPCODE(instrp)  == 2){
+			CURRENT_STATE.PC = TARGET(instrp)*4;
+			CURRENT_STATE.ID_EX_DEST = 1;
+		}
+		else if(OPCODE(instrp) == 3){
+			CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+8;
+			CURRENT_STATE.PC = TARGET(instrp)*4;
+			CURRENT_STATE.ID_EX_DEST = 1;
+		}
+		else if(OPCODE(instrp) == 0 &&FUNC(instrp) == 8){
+			CURRENT_STATE.PC = CURRENT_STATE.REGS[RS(instrp)];
+			CURRENT_STATE.ID_EX_DEST = 1;
+		}
+		else{
+		//	CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+			CURRENT_STATE.ID_EX_DEST = 0;
+		}
+	} else {
+		CURRENT_STATE.PIPE[1] = 0;
+	}
 }
 void EX_Stage(){
 
@@ -209,6 +209,8 @@ void EX_Stage(){
 				CURRENT_STATE.EX_MEM_DEST = RD(inst);
 			}
 		}
+	} else {
+		CURRENT_STATE.PIPE[2] = 0;
 	}
 }
 
@@ -233,10 +235,15 @@ void MEM_Stage(){
 			CURRENT_STATE.ID_EX_NPC = 0;
 			CURRENT_STATE.EX_MEM_NPC=0; 
 			CURRENT_STATE.PC = CURRENT_STATE.EX_MEM_BR_TARGET;
+			CURRENT_STATE.PIPE[0] = 0;
+			CURRENT_STATE.PIPE[1] = 0;
+			CURRENT_STATE.PIPE[2] = 0;
 		}
 		CURRENT_STATE.MEM_WB_BR_TAKE = CURRENT_STATE.EX_MEM_BR_TAKE;
 		CURRENT_STATE.MEM_WB_DEST  = CURRENT_STATE.EX_MEM_DEST; 
-	}		
+	} else {
+		CURRENT_STATE.PIPE[3] = 0;
+	}	
 }
 void WB_Stage(){
 	if(CURRENT_STATE.MEM_WB_NPC!=0){
@@ -249,6 +256,7 @@ void WB_Stage(){
 		else if(OPCODE(instrp) != 4 && OPCODE(instrp) != 5&& OPCODE(instrp)!=43&&OPCODE(instrp)!= 2&&OPCODE(instrp) != 3 &&~(OPCODE(instrp)==0 && FUNC(instrp) ==8)){
 			CURRENT_STATE.REGS[CURRENT_STATE.MEM_WB_DEST] = CURRENT_STATE.MEM_WB_ALU_OUT;
 		}
-
+	} else {
+		CURRENT_STATE.PIPE[4] = 0;
 	}	
 }  
