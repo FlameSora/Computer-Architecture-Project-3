@@ -37,27 +37,21 @@ void process_instruction(){
 //	instrp = get_inst_info(CURRENT_STATE.PC);
 //	instruction instr = *instrp;
 //	printf(" op code is: %x\n", instr.opcode);
-	printf("pc is %x\n",CURRENT_STATE.PC);
+//	printf("pc is %x\n",CURRENT_STATE.PC);
 //	printf("stare");
 	WB_Stage();
-	printf("1");
 	MEM_Stage();
 	EX_Stage();
-	printf("2");
 	ID_Stage();
-	printf("3");
 	IF_Stage();
-	sleep(1);
+//	sleep(1);
 }
 
 void IF_Stage(){
 	if (CURRENT_STATE.IF_ID_INST ==1){
-		printf("hihihihihihohoihoi");
 		CURRENT_STATE.PIPE[0] = 0;
 		CURRENT_STATE.IF_ID_INST =0;
-		printf("yyoyoyoyoyoyo");
 		CURRENT_STATE.IF_ID_NPC = 0;
-		printf("hhuhuhyyyytyy");
 	}
 	else{
 
@@ -99,6 +93,7 @@ void ID_Stage(){
 		}
 	} else {
 		CURRENT_STATE.PIPE[1] = 0;
+		CURRENT_STATE.ID_EX_NPC = 0;
 	}
 }
 void EX_Stage(){
@@ -224,6 +219,7 @@ void EX_Stage(){
 		}
 	} else {
 		CURRENT_STATE.PIPE[2] = 0;
+		CURRENT_STATE.EX_MEM_NPC = 0;
 	}
 }
 
@@ -258,8 +254,10 @@ void MEM_Stage(){
 		}
 		CURRENT_STATE.MEM_WB_BR_TAKE = CURRENT_STATE.EX_MEM_BR_TAKE;
 		CURRENT_STATE.MEM_WB_DEST  = CURRENT_STATE.EX_MEM_DEST; 
+		CURRENT_STATE.EX_MEM_BR_TAKE =0;
 	} else {
 		CURRENT_STATE.PIPE[3] = 0;
+		CURRENT_STATE.MEM_WB_NPC = 0;
 	}	
 }
 void WB_Stage(){
