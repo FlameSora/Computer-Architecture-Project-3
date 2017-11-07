@@ -40,18 +40,31 @@ void process_instruction(){
 	printf("pc is %x\n",CURRENT_STATE.PC);
 //	printf("stare");
 	WB_Stage();
+	printf("1");
 	MEM_Stage();
 	EX_Stage();
+	printf("2");
 	ID_Stage();
+	printf("3");
 	IF_Stage();
 	sleep(1);
 }
 
 void IF_Stage(){
+	if (CURRENT_STATE.IF_ID_INST ==1){
+		printf("hihihihihihohoihoi");
+		CURRENT_STATE.PIPE[0] = 0;
+		CURRENT_STATE.IF_ID_INST =0;
+		printf("yyoyoyoyoyoyo");
+		CURRENT_STATE.IF_ID_NPC = 0;
+		printf("hhuhuhyyyytyy");
+	}
+	else{
 
-	CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
-	CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
-	CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+		CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+		CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
+		CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+	}
 }
 void ID_Stage(){
 	instruction* instrp; 
@@ -97,7 +110,7 @@ void EX_Stage(){
 		//instruction instr = *inst;
 		CURRENT_STATE.PIPE[2] = CURRENT_STATE.ID_EX_NPC;
 		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.ID_EX_NPC;
-		
+			
 		short op = OPCODE(inst);
 		short func = FUNC(inst);
 		uint32_t reg1 = CURRENT_STATE.ID_EX_REG1; // rs
@@ -215,7 +228,7 @@ void EX_Stage(){
 void MEM_Stage(){
 	if(CURRENT_STATE.EX_MEM_NPC != 0){
 		instruction* instrp; 
-		instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
+		instrp = get_inst_info(CURRENT_STATE.EX_MEM_NPC);
 		CURRENT_STATE.PIPE[3] = CURRENT_STATE.EX_MEM_NPC;
 		CURRENT_STATE.MEM_WB_NPC = CURRENT_STATE.EX_MEM_NPC;
 		CURRENT_STATE.MEM_WB_ALU_OUT = CURRENT_STATE.EX_MEM_ALU_OUT;
@@ -229,9 +242,13 @@ void MEM_Stage(){
 		}
 		if(CURRENT_STATE.EX_MEM_BR_TAKE ==1){
 			//flush
+			CURRENT_STATE.IF_ID_INST =1;
 			CURRENT_STATE.IF_ID_NPC = 0;
+			CURRENT_STATE.PIPE[0] = 0;
 			CURRENT_STATE.ID_EX_NPC = 0;
-			CURRENT_STATE.EX_MEM_NPC=0; 
+			CURRENT_STATE.PIPE[1]=0;
+			CURRENT_STATE.EX_MEM_NPC=0;
+			CURRENT_STATE.PIPE[2] =0; 
 			CURRENT_STATE.PC = CURRENT_STATE.EX_MEM_BR_TARGET;
 		}
 		CURRENT_STATE.MEM_WB_BR_TAKE = CURRENT_STATE.EX_MEM_BR_TAKE;
@@ -241,7 +258,7 @@ void MEM_Stage(){
 void WB_Stage(){
 	if(CURRENT_STATE.MEM_WB_NPC!=0){
 		instruction* instrp; 
-		instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
+		instrp = get_inst_info(CURRENT_STATE.MEM_WB_NPC);
 		CURRENT_STATE.PIPE[4] = CURRENT_STATE.MEM_WB_NPC;
 		if(OPCODE(instrp) == 35){
 			CURRENT_STATE.REGS[CURRENT_STATE.MEM_WB_DEST] = CURRENT_STATE.MEM_WB_MEM_OUT;
