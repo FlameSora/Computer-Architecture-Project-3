@@ -46,7 +46,7 @@ void process_instruction(){
 	IF_Stage();
 	usleep(50000);
 	//INSTRUCTION_COUNT++;
-	printf("%d\n", MAX_INSTRUCTION_NUM);
+	//printf("%d\n", MAX_INSTRUCTION_NUM);
 }
 
 void IF_Stage(){
@@ -62,10 +62,16 @@ void IF_Stage(){
 			CURRENT_STATE.IF_ID_NPC = 0;
 		}
 		else{
-
-			CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
-			CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
-			CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+			if(CURRENT_STATE.JUMP_PC !=0){
+				CURRENT_STATE.IF_ID_NPC = 0;
+				CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+				CURRENT_STATE.PC = CURRENT_STATE.JUMP_PC;
+				CURRENT_STATE.JUMP_PC = 0;
+			}else {
+				CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+				CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
+				CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+			}
 		}
 	}
 }
@@ -88,12 +94,15 @@ void ID_Stage(){
 		CURRENT_STATE.ID_EX_REG2 = RT(instrp);
 		CURRENT_STATE.ID_EX_IMM = IMM(instrp);
 		if (OPCODE(instrp)  == 2){
-			CURRENT_STATE.PC = TARGET(instrp)*4;
+			CURRENT_STATE.JUMP_PC = TARGET(instrp)*4;
+		
+			//CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else if(OPCODE(instrp) == 3){
 			CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+4;
-			CURRENT_STATE.PC = TARGET(instrp)*4;
+			CURRENT_STATE.JUMP_PC = TARGET(instrp)*4;
+			//CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else if(OPCODE(instrp) == 0 &&FUNC(instrp) == 8){
@@ -142,9 +151,17 @@ void EX_Stage(){
 			else{ 
 				if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
 					reg1 = CURRENT_STATE.MEM_WB_ALU_OUT;
+					CURRENT_STATE.PIPE_STALL[0] = 1;
+					CURRENT_STATE.PIPE_STALL[1] = 1;
+					CURRENT_STATE.PIPE_STALL[2] = 1;
+					CURRENT_STATE.PIPE[2] =0;
 				}
 				if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
 					reg2 = CURRENT_STATE.MEM_WB_ALU_OUT;
+					CURRENT_STATE.PIPE_STALL[0] = 1;
+					CURRENT_STATE.PIPE_STALL[1] = 1;
+					CURRENT_STATE.PIPE_STALL[2] = 1;
+					CURRENT_STATE.PIPE[2] =0;
 				}
 			}
 		}
@@ -339,10 +356,10 @@ void WB_Stage(){
 		}
 		//INSTRUCTION_COUNT++;
 		if ((CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) && (CURRENT_STATE.EX_MEM_NPC != 0)) {
-			printf("%x\n", CURRENT_STATE.EX_MEM_NPC);
+		//	printf("%x\n", CURRENT_STATE.EX_MEM_NPC);
 			RUN_BIT = FALSE;
 		}
-		printf("instruc count is : %d\n",INSTRUCTION_COUNT);
+	//	printf("instruc count is : %d\n",INSTRUCTION_COUNT);
 		INSTRUCTION_COUNT++;
 	} else {
 		CURRENT_STATE.PIPE[4] = 0;
