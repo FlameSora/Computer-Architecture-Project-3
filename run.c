@@ -45,6 +45,8 @@ void process_instruction(){
 	ID_Stage();
 	IF_Stage();
 	usleep(50000);
+	//INSTRUCTION_COUNT++;
+	printf("%d\n", MAX_INSTRUCTION_NUM);
 }
 
 void IF_Stage(){
@@ -274,7 +276,7 @@ void EX_Stage(){
 void MEM_Stage(){
 
 	if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
-		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.MEM_WB_NPC;
+		CURRENT_STATE.MEM_WB_NPC = CURRENT_STATE.EX_MEM_NPC;
 		//printf("hello there"\n);
 		CURRENT_STATE.PIPE[3] = 0;
 		//printf("changed"\n)
@@ -335,9 +337,13 @@ void WB_Stage(){
 		else if(OPCODE(instrp) != 4 && OPCODE(instrp) != 5&& OPCODE(instrp)!=43&&OPCODE(instrp)!= 2&&OPCODE(instrp) != 3 &&~(OPCODE(instrp)==0 && FUNC(instrp) ==8)){
 			CURRENT_STATE.REGS[CURRENT_STATE.MEM_WB_DEST] = CURRENT_STATE.MEM_WB_ALU_OUT;
 		}
-		if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
+		//INSTRUCTION_COUNT++;
+		if ((CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) && (CURRENT_STATE.EX_MEM_NPC != 0)) {
+			printf("%x\n", CURRENT_STATE.EX_MEM_NPC);
 			RUN_BIT = FALSE;
 		}
+		printf("instruc count is : %d\n",INSTRUCTION_COUNT);
+		INSTRUCTION_COUNT++;
 	} else {
 		CURRENT_STATE.PIPE[4] = 0;
 	}	
