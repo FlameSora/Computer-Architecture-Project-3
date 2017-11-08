@@ -44,7 +44,7 @@ void process_instruction(){
 	EX_Stage();
 	ID_Stage();
 	IF_Stage();
-//	sleep(1);
+	usleep(50000);
 }
 
 void IF_Stage(){
@@ -70,16 +70,15 @@ void ID_Stage(){
 	//	instruction instr = *instrp;
 		CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID_NPC;
 		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
-		CURRENT_STATE.ID_EX_REG1 = CURRENT_STATE.REGS[RS(instrp)];
-	//	printf("RS is:%x \n",RS(instrp));
-		CURRENT_STATE.ID_EX_REG2 = CURRENT_STATE.REGS[RT(instrp)];
+		CURRENT_STATE.ID_EX_REG1 = RS(instrp);
+		CURRENT_STATE.ID_EX_REG2 = RT(instrp);
 		CURRENT_STATE.ID_EX_IMM = IMM(instrp);
 		if (OPCODE(instrp)  == 2){
 			CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else if(OPCODE(instrp) == 3){
-			CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+8;
+			CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+4;
 			CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
@@ -108,11 +107,42 @@ void EX_Stage(){
 			
 		short op = OPCODE(inst);
 		short func = FUNC(inst);
-		uint32_t reg1 = CURRENT_STATE.ID_EX_REG1; // rs
-		uint32_t reg2 = CURRENT_STATE.ID_EX_REG2; // rt
+		uint32_t reg1 = CURRENT_STATE.REGS[CURRENT_STATE.ID_EX_REG1]; // rs
+		uint32_t reg2 = CURRENT_STATE.REGS[CURRENT_STATE.ID_EX_REG2]; // rt
 		short imm = CURRENT_STATE.ID_EX_IMM;
 		unsigned char sh = SHAMT(inst);
-		
+		if(CURRENT_STATE.MEM_WB_FORW==1){
+			if(CURRENT_STATE.EX_MEM_FORW ==1){
+				if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.EX_MEM_DEST){
+					reg1 = CURRENT_STATE.EX_MEM_ALU_OUT;
+				}
+				if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.EX_MEM_DEST){
+					reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
+				}
+			}
+			else{ 
+				if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
+					reg1 = CURRENT_STATE.MEM_WB_ALU_OUT;
+				}
+				if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
+					reg2 = CURRENT_STATE.MEM_WB_ALU_OUT;
+				}
+			}
+		}
+		else if(CURRENT_STATE.EX_MEM_FORW ==1){
+			if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.EX_MEM_DEST){
+				reg1 = CURRENT_STATE.EX_MEM_ALU_OUT;
+			}
+			if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.EX_MEM_DEST){
+				reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
+			}
+		}
+		if(OPCODE(inst) != 4 && OPCODE(inst) != 5&& OPCODE(inst)!=43&&OPCODE(inst)!= 2&&OPCODE(inst) != 3 &&~(OPCODE(inst)==0 && FUNC(inst) ==8)){
+			CURRENT_STATE.EX_MEM_FORW = 1;
+		}
+		else{
+			CURRENT_STATE.EX_MEM_FORW = 0;
+		}
 		// Addiu
 		if (op == 9) {
 			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
@@ -216,6 +246,7 @@ void EX_Stage(){
 				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 - reg2;
 				CURRENT_STATE.EX_MEM_DEST = RD(inst);
 			}
+
 		}
 	} else {
 		CURRENT_STATE.PIPE[2] = 0;
@@ -235,8 +266,8 @@ void MEM_Stage(){
 			mem_write_32(CURRENT_STATE.EX_MEM_ALU_OUT, CURRENT_STATE.EX_MEM_W_VALUE);
 		}
 		else if(OPCODE(instrp) == 35){
-		//lw 
-			CURRENT_STATE.MEM_WB_MEM_OUT = mem_read_32(CURRENT_STATE.EX_MEM_ALU_OUT);
+		//lw
+			CURRENT_STATE.MEM_WB_MEM_OUT = mem_read_32(CURRENT_STATE.EX_MEM_ALU_OUT);	
 		}
 		if(CURRENT_STATE.EX_MEM_BR_TAKE ==1){
 			//flush
@@ -251,6 +282,13 @@ void MEM_Stage(){
 			CURRENT_STATE.PIPE[0] = 0;
 			CURRENT_STATE.PIPE[1] = 0;
 			CURRENT_STATE.PIPE[2] = 0;
+		}
+		
+		if(OPCODE(instrp) ==35){
+			CURRENT_STATE.MEM_WB_FORW = 1;	
+		}
+		else{
+			CURRENT_STATE.MEM_WB_FORW = 0;
 		}
 		CURRENT_STATE.MEM_WB_BR_TAKE = CURRENT_STATE.EX_MEM_BR_TAKE;
 		CURRENT_STATE.MEM_WB_DEST  = CURRENT_STATE.EX_MEM_DEST; 
@@ -274,4 +312,5 @@ void WB_Stage(){
 	} else {
 		CURRENT_STATE.PIPE[4] = 0;
 	}	
-}  
+}   
+
