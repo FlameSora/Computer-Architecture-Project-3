@@ -33,20 +33,11 @@ instruction* get_inst_info(uint32_t pc) {
 /***************************************************************/
 void process_instruction(){
 	/** Your implementation here */
-//	instruction* instrp;
-//	instrp = get_inst_info(CURRENT_STATE.PC);
-//	instruction instr = *instrp;
-//	printf(" op code is: %x\n", instr.opcode);
-//	printf("pc is %x\n",CURRENT_STATE.PC);
-//	printf("stare");
 	WB_Stage();
 	MEM_Stage();
 	EX_Stage();
 	ID_Stage();
 	IF_Stage();
-	usleep(50000);
-	//INSTRUCTION_COUNT++;
-	//printf("%d\n", MAX_INSTRUCTION_NUM);
 }
 
 void IF_Stage(){
@@ -54,7 +45,11 @@ void IF_Stage(){
 	if (CURRENT_STATE.PC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
 		CURRENT_STATE.PIPE[0] = 0;
-	} else {
+	} 
+	else if(CURRENT_STATE.MEM_WB_FORWARD_REG==1){
+		CURRENT_STATE.PIPE[0] = CURRENT_STATE.PIPE[0];
+	}
+	else {
 	
 		if (CURRENT_STATE.IF_ID_INST ==1){
 			CURRENT_STATE.PIPE[0] = 0;
@@ -81,13 +76,14 @@ void ID_Stage(){
 		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
 		CURRENT_STATE.PIPE[1] = 0;
 	}
+	else if (CURRENT_STATE.MEM_WB_FORWARD_REG==1){
+		CURRENT_STATE.PIPE[1] = CURRENT_STATE.PIPE[1];
+	}	
 
 	else if (CURRENT_STATE.IF_ID_NPC != 0) {
 
 		instruction* instrp; 
 		instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
-		
-	//	instruction instr = *instrp;
 		CURRENT_STATE.PIPE[1] = CURRENT_STATE.IF_ID_NPC;
 		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
 		CURRENT_STATE.ID_EX_REG1 = RS(instrp);
@@ -95,22 +91,18 @@ void ID_Stage(){
 		CURRENT_STATE.ID_EX_IMM = IMM(instrp);
 		if (OPCODE(instrp)  == 2){
 			CURRENT_STATE.JUMP_PC = TARGET(instrp)*4;
-		
-			//CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else if(OPCODE(instrp) == 3){
 			CURRENT_STATE.REGS[31] = CURRENT_STATE.PC+4;
 			CURRENT_STATE.JUMP_PC = TARGET(instrp)*4;
-			//CURRENT_STATE.PC = TARGET(instrp)*4;
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else if(OPCODE(instrp) == 0 &&FUNC(instrp) == 8){
-			CURRENT_STATE.PC = CURRENT_STATE.REGS[RS(instrp)];
+			CURRENT_STATE.JUMP_PC = CURRENT_STATE.REGS[RS(instrp)];
 			CURRENT_STATE.ID_EX_DEST = 1;
 		}
 		else{
-		//	CURRENT_STATE.PC = CURRENT_STATE.PC +4;
 			CURRENT_STATE.ID_EX_DEST = 0;
 		}
 	} else {
@@ -129,7 +121,6 @@ void EX_Stage(){
 
 		instruction* inst;
 		inst = get_inst_info(CURRENT_STATE.ID_EX_NPC);
-		//instruction instr = *inst;
 		CURRENT_STATE.PIPE[2] = CURRENT_STATE.ID_EX_NPC;
 		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.ID_EX_NPC;
 			
@@ -139,8 +130,37 @@ void EX_Stage(){
 		uint32_t reg2 = CURRENT_STATE.REGS[CURRENT_STATE.ID_EX_REG2]; // rt
 		short imm = CURRENT_STATE.ID_EX_IMM;
 		unsigned char sh = SHAMT(inst);
-		if(CURRENT_STATE.MEM_WB_FORW==1){
-			if(CURRENT_STATE.EX_MEM_FORW ==1){
+		if (CURRENT_STATE.MEM_WB_FORWARD_REG !=1){
+			  if(CURRENT_STATE.MEM_WB_FORW==1){
+				if(CURRENT_STATE.EX_MEM_FORW ==1){
+					if(CURRENT_STATE.ID_EX_REG1 == RD(inst)){
+						reg1 = CURRENT_STATE.EX_MEM_ALU_OUT;
+					}
+					else if (CURRENT_STATE.ID_EX_REG2 == RD(inst)){
+						reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
+					}
+					else{
+						if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
+							reg1 = CURRENT_STATE.MEM_WB_MEM_OUT;
+							CURRENT_STATE.MEM_WB_FORWARD_REG = 1;
+						}
+						if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
+							reg2 = CURRENT_STATE.MEM_WB_MEM_OUT;
+							CURRENT_STATE.MEM_WB_FORWARD_REG = 1;
+						}
+					}
+				}
+				else{ 
+					if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
+						reg1 = CURRENT_STATE.MEM_WB_MEM_OUT;
+					}
+					if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
+						reg2 = CURRENT_STATE.MEM_WB_MEM_OUT;
+					}
+				}
+				
+			}
+			else if(CURRENT_STATE.EX_MEM_FORW ==1){
 				if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.EX_MEM_DEST){
 					reg1 = CURRENT_STATE.EX_MEM_ALU_OUT;
 				}
@@ -148,141 +168,125 @@ void EX_Stage(){
 					reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
 				}
 			}
-			else{ 
-				if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
-					reg1 = CURRENT_STATE.MEM_WB_ALU_OUT;
-					CURRENT_STATE.PIPE_STALL[0] = 1;
-					CURRENT_STATE.PIPE_STALL[1] = 1;
-					CURRENT_STATE.PIPE_STALL[2] = 1;
-					CURRENT_STATE.PIPE[2] =0;
-				}
-				if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
-					reg2 = CURRENT_STATE.MEM_WB_ALU_OUT;
-					CURRENT_STATE.PIPE_STALL[0] = 1;
-					CURRENT_STATE.PIPE_STALL[1] = 1;
-					CURRENT_STATE.PIPE_STALL[2] = 1;
-					CURRENT_STATE.PIPE[2] =0;
-				}
-			}
-		}
-		else if(CURRENT_STATE.EX_MEM_FORW ==1){
-			if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.EX_MEM_DEST){
-				reg1 = CURRENT_STATE.EX_MEM_ALU_OUT;
-			}
-			if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.EX_MEM_DEST){
-				reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
-			}
-		}
-		if(OPCODE(inst) != 4 && OPCODE(inst) != 5&& OPCODE(inst)!=43&&OPCODE(inst)!= 2&&OPCODE(inst) != 3 &&~(OPCODE(inst)==0 && FUNC(inst) ==8)){
-			CURRENT_STATE.EX_MEM_FORW = 1;
 		}
 		else{
-			CURRENT_STATE.EX_MEM_FORW = 0;
+			CURRENT_STATE.MEM_WB_FORWARD_REG = 0;
 		}
-		// Addiu
-		if (op == 9) {
-			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
-			CURRENT_STATE.EX_MEM_DEST = RT(inst);
-		}
-		// Andi
-		if (op == 12) {
-			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 & imm;
-			CURRENT_STATE.EX_MEM_DEST = RT(inst);
-		}
-		// Beq
-		if (op == 4) {
-			if (reg1 == reg2) {
-				CURRENT_STATE.EX_MEM_BR_TARGET = CURRENT_STATE.ID_EX_NPC + 4 + imm*4;
-				CURRENT_STATE.EX_MEM_BR_TAKE = TRUE;
+		if (CURRENT_STATE.MEM_WB_FORWARD_REG != 1){
+			if(OPCODE(inst) != 4 && OPCODE(inst) != 5&& OPCODE(inst)!=43&&OPCODE(inst)!= 2&&OPCODE(inst) != 3 &&~(OPCODE(inst)==0 && FUNC(inst) ==8)){
+				CURRENT_STATE.EX_MEM_FORW = 1;
 			}
-		}
-		// Bne
-		if (op == 5) {
-			if (reg1 != reg2) {
-				CURRENT_STATE.EX_MEM_BR_TARGET = CURRENT_STATE.ID_EX_NPC + 4 + imm*4;
-				CURRENT_STATE.EX_MEM_BR_TAKE = TRUE;
+			else{
+				CURRENT_STATE.EX_MEM_FORW = 0;
 			}
-		}
-		// Lui
-		if (op == 15) {
-			uint32_t data = (uint32_t) imm;
-			CURRENT_STATE.EX_MEM_ALU_OUT = data << 16;
-			CURRENT_STATE.EX_MEM_DEST = RT(inst);
-		}
-		// Lw
-		if (op == 35) {
-			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
-			CURRENT_STATE.EX_MEM_DEST = RT(inst);
-		}
-		// Ori
-		if (op == 13) {
-			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 | imm;
-			CURRENT_STATE.EX_MEM_DEST = RT(inst);
-		}
-		// Sltiu
-		if (op == 11) {
-			uint32_t data = (uint32_t) imm;
-			if (reg1 < data) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = 1;
-				CURRENT_STATE.EX_MEM_DEST = RT(inst);
-			} else {
-				CURRENT_STATE.EX_MEM_ALU_OUT = 0;
+			// Addiu
+			if (op == 9) {
+				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
 				CURRENT_STATE.EX_MEM_DEST = RT(inst);
 			}
-		}
-		// Sw
-		if (op == 43) {
-			CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
-			CURRENT_STATE.EX_MEM_W_VALUE = reg2;
-		}
-		// R types
-		if (op == 0) {
-			// Addu
-			if (func == 33) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + reg2;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
+			// Andi
+			if (op == 12) {
+				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 & imm;
+				CURRENT_STATE.EX_MEM_DEST = RT(inst);
 			}
-			// And
-			if (func == 36) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 & reg2;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
-			}
-			// Nor
-			if (func == 39) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = ~(reg1 | reg2);
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
-			}
-			// Or
-			if (func == 37) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 | reg2;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
-			}
-			// Sltu
-			if (func == 43) {
-				if (reg1 < reg2) {
-					CURRENT_STATE.EX_MEM_ALU_OUT = 1;
-					CURRENT_STATE.EX_MEM_DEST = RD(inst);
-				} else {
-					CURRENT_STATE.EX_MEM_ALU_OUT = 0;
-					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+			// Beq
+			if (op == 4) {
+				if (reg1 == reg2) {
+					CURRENT_STATE.EX_MEM_BR_TARGET = CURRENT_STATE.ID_EX_NPC + 4 + imm*4;
+					CURRENT_STATE.EX_MEM_BR_TAKE = TRUE;
 				}
 			}
-			// Sll
-			if (func == 0) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg2 << sh;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
+			// Bne
+			if (op == 5) {
+				if (reg1 != reg2) {
+					CURRENT_STATE.EX_MEM_BR_TARGET = CURRENT_STATE.ID_EX_NPC + 4 + imm*4;
+					CURRENT_STATE.EX_MEM_BR_TAKE = TRUE;
+				}
 			}
-			// Srl
-			if (func == 2) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg2 >> sh;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
+			// Lui
+			if (op == 15) {
+				uint32_t data = (uint32_t) imm;
+				CURRENT_STATE.EX_MEM_ALU_OUT = data << 16;
+				CURRENT_STATE.EX_MEM_DEST = RT(inst);
 			}
-			// Subu
-			if (func == 35) {
-				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 - reg2;
-				CURRENT_STATE.EX_MEM_DEST = RD(inst);
+			// Lw
+			if (op == 35) {
+				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
+				CURRENT_STATE.EX_MEM_DEST = RT(inst);
 			}
+			// Ori
+			if (op == 13) {
+				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 | imm;
+				CURRENT_STATE.EX_MEM_DEST = RT(inst);
+			}
+			// Sltiu
+			if (op == 11) {
+				uint32_t data = (uint32_t) imm;
+				if (reg1 < data) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = 1;
+					CURRENT_STATE.EX_MEM_DEST = RT(inst);
+				} else {
+					CURRENT_STATE.EX_MEM_ALU_OUT = 0;
+					CURRENT_STATE.EX_MEM_DEST = RT(inst);
+				}
+			}
+			// Sw
+			if (op == 43) {
+				CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + imm;
+				CURRENT_STATE.EX_MEM_W_VALUE = reg2;
+			}
+			// R types
+			if (op == 0) {
+				// Addu
+				if (func == 33) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg1 + reg2;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// And
+				if (func == 36) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg1 & reg2;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// Nor
+				if (func == 39) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = ~(reg1 | reg2);
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// Or
+				if (func == 37) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg1 | reg2;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// Sltu
+				if (func == 43) {
+					if (reg1 < reg2) {
+						CURRENT_STATE.EX_MEM_ALU_OUT = 1;
+						CURRENT_STATE.EX_MEM_DEST = RD(inst);
+					} else {
+						CURRENT_STATE.EX_MEM_ALU_OUT = 0;
+						CURRENT_STATE.EX_MEM_DEST = RD(inst);
+					}
+				}
+				// Sll
+				if (func == 0) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg2 << sh;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// Srl
+				if (func == 2) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg2 >> sh;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
+				// Subu
+				if (func == 35) {
+					CURRENT_STATE.EX_MEM_ALU_OUT = reg1 - reg2;
+					CURRENT_STATE.EX_MEM_DEST = RD(inst);
+				}
 
+			}
+		}else{
+			CURRENT_STATE.PIPE[2] = 0;
+			CURRENT_STATE.EX_MEM_NPC = 0;
 		}
 	} else {
 		CURRENT_STATE.PIPE[2] = 0;
@@ -294,9 +298,7 @@ void MEM_Stage(){
 
 	if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.MEM_WB_NPC = CURRENT_STATE.EX_MEM_NPC;
-		//printf("hello there"\n);
 		CURRENT_STATE.PIPE[3] = 0;
-		//printf("changed"\n)
 	}	
 
 	else if(CURRENT_STATE.EX_MEM_NPC != 0){
@@ -354,12 +356,9 @@ void WB_Stage(){
 		else if(OPCODE(instrp) != 4 && OPCODE(instrp) != 5&& OPCODE(instrp)!=43&&OPCODE(instrp)!= 2&&OPCODE(instrp) != 3 &&~(OPCODE(instrp)==0 && FUNC(instrp) ==8)){
 			CURRENT_STATE.REGS[CURRENT_STATE.MEM_WB_DEST] = CURRENT_STATE.MEM_WB_ALU_OUT;
 		}
-		//INSTRUCTION_COUNT++;
 		if ((CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) && (CURRENT_STATE.EX_MEM_NPC != 0)) {
-		//	printf("%x\n", CURRENT_STATE.EX_MEM_NPC);
 			RUN_BIT = FALSE;
 		}
-	//	printf("instruc count is : %d\n",INSTRUCTION_COUNT);
 		INSTRUCTION_COUNT++;
 	} else {
 		CURRENT_STATE.PIPE[4] = 0;
