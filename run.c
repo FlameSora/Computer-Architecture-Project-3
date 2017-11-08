@@ -48,21 +48,33 @@ void process_instruction(){
 }
 
 void IF_Stage(){
-	if (CURRENT_STATE.IF_ID_INST ==1){
-		CURRENT_STATE.PIPE[0] = 0;
-		CURRENT_STATE.IF_ID_INST =0;
-		CURRENT_STATE.IF_ID_NPC = 0;
-	}
-	else{
 
-		CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+	if (CURRENT_STATE.PC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
-		CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+		CURRENT_STATE.PIPE[0] = 0;
+	} else {
+	
+		if (CURRENT_STATE.IF_ID_INST ==1){
+			CURRENT_STATE.PIPE[0] = 0;
+			CURRENT_STATE.IF_ID_INST =0;
+			CURRENT_STATE.IF_ID_NPC = 0;
+		}
+		else{
+
+			CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
+			CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
+			CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+		}
 	}
 }
 void ID_Stage(){
 	
-	if (CURRENT_STATE.IF_ID_NPC != 0) {
+	if (CURRENT_STATE.IF_ID_NPC - MEM_TEXT_START >= 4*NUM_INST) {
+		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
+		CURRENT_STATE.PIPE[1] = 0;
+	}
+
+	else if (CURRENT_STATE.IF_ID_NPC != 0) {
 
 		instruction* instrp; 
 		instrp = get_inst_info(CURRENT_STATE.IF_ID_NPC);
@@ -97,8 +109,13 @@ void ID_Stage(){
 	}
 }
 void EX_Stage(){
-
-	if (CURRENT_STATE.ID_EX_NPC != 0) {
+	
+	if (CURRENT_STATE.ID_EX_NPC - MEM_TEXT_START >= 4*NUM_INST) {
+		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.ID_EX_NPC;
+		CURRENT_STATE.PIPE[2] = 0;
+	}
+	
+	else if (CURRENT_STATE.ID_EX_NPC != 0) {
 
 		instruction* inst;
 		inst = get_inst_info(CURRENT_STATE.ID_EX_NPC);
@@ -224,7 +241,15 @@ void EX_Stage(){
 }
 
 void MEM_Stage(){
-	if(CURRENT_STATE.EX_MEM_NPC != 0){
+
+	if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
+		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.MEM_WB_NPC;
+		//printf("hello there"\n);
+		CURRENT_STATE.PIPE[3] = 0;
+		//printf("changed"\n)
+	}	
+
+	else if(CURRENT_STATE.EX_MEM_NPC != 0){
 		instruction* instrp; 
 		instrp = get_inst_info(CURRENT_STATE.EX_MEM_NPC);
 		CURRENT_STATE.PIPE[3] = CURRENT_STATE.EX_MEM_NPC;
@@ -261,6 +286,7 @@ void MEM_Stage(){
 	}	
 }
 void WB_Stage(){
+	
 	if(CURRENT_STATE.MEM_WB_NPC!=0){
 		instruction* instrp; 
 		instrp = get_inst_info(CURRENT_STATE.MEM_WB_NPC);
@@ -270,6 +296,9 @@ void WB_Stage(){
 		}
 		else if(OPCODE(instrp) != 4 && OPCODE(instrp) != 5&& OPCODE(instrp)!=43&&OPCODE(instrp)!= 2&&OPCODE(instrp) != 3 &&~(OPCODE(instrp)==0 && FUNC(instrp) ==8)){
 			CURRENT_STATE.REGS[CURRENT_STATE.MEM_WB_DEST] = CURRENT_STATE.MEM_WB_ALU_OUT;
+		}
+		if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
+			RUN_BIT = FALSE;
 		}
 	} else {
 		CURRENT_STATE.PIPE[4] = 0;
