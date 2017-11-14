@@ -41,16 +41,20 @@ void process_instruction(){
 }
 
 void IF_Stage(){
-
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 	if (CURRENT_STATE.PC - MEM_TEXT_START >= 4*NUM_INST) {
+//		printf("1rrrr");
 		CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
 		CURRENT_STATE.PIPE[0] = 0;
 	} 
 	else if(CURRENT_STATE.MEM_WB_FORWARD_REG==1){
+//		printf("2ssss");
 		CURRENT_STATE.PIPE[0] = CURRENT_STATE.PIPE[0];
+		CURRENT_STATE.PC = CURRENT_STATE.IF_PC+4;
+		CURRENT_STATE.IF_PC = 0;
 	}
 	else {
-	
+//		printf("3tttt");	
 		if (CURRENT_STATE.IF_ID_INST ==1){
 			CURRENT_STATE.PIPE[0] = 0;
 			CURRENT_STATE.IF_ID_INST =0;
@@ -65,13 +69,17 @@ void IF_Stage(){
 			}else {
 				CURRENT_STATE.PIPE[0] = CURRENT_STATE.PC;
 				CURRENT_STATE.IF_ID_NPC = CURRENT_STATE.PC;
-				CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+				if(CURRENT_STATE.IF_PC==0){
+					CURRENT_STATE.PC = CURRENT_STATE.PC +4;
+				}
 			}
 		}
 	}
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 }
 void ID_Stage(){
 	
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 	if (CURRENT_STATE.IF_ID_NPC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.ID_EX_NPC = CURRENT_STATE.IF_ID_NPC;
 		CURRENT_STATE.PIPE[1] = 0;
@@ -111,7 +119,8 @@ void ID_Stage(){
 	}
 }
 void EX_Stage(){
-	
+//	CURRENT_STATE.IF_PC = 0;
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 	if (CURRENT_STATE.ID_EX_NPC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.EX_MEM_NPC = CURRENT_STATE.ID_EX_NPC;
 		CURRENT_STATE.PIPE[2] = 0;
@@ -139,7 +148,7 @@ void EX_Stage(){
 					else if (CURRENT_STATE.ID_EX_REG2 == RD(inst)){
 						reg2 = CURRENT_STATE.EX_MEM_ALU_OUT;
 					}
-					else{
+					else {
 						if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
 							reg1 = CURRENT_STATE.MEM_WB_MEM_OUT;
 							CURRENT_STATE.MEM_WB_FORWARD_REG = 1;
@@ -153,9 +162,11 @@ void EX_Stage(){
 				else{ 
 					if(CURRENT_STATE.ID_EX_REG1 == CURRENT_STATE.MEM_WB_DEST){
 						reg1 = CURRENT_STATE.MEM_WB_MEM_OUT;
-					}
+						CURRENT_STATE.MEM_WB_FORWARD_REG = 1;
+					}	
 					if (CURRENT_STATE.ID_EX_REG2 == CURRENT_STATE.MEM_WB_DEST){
 						reg2 = CURRENT_STATE.MEM_WB_MEM_OUT;
+						CURRENT_STATE.MEM_WB_FORWARD_REG = 1;
 					}
 				}
 				
@@ -284,6 +295,16 @@ void EX_Stage(){
 				}
 
 			}
+			if (op == 35) {
+				instruction* instrpT; 
+				instrpT = get_inst_info(CURRENT_STATE.IF_ID_NPC);
+		//		if(OPCODE(instrpT) != 4 && OPCODE(instrpT) != 5&& OPCODE(instrpT)!=43&&OPCODE(instrpT)!= 2&&OPCODE(instrpT) != 3 &&~(OPCODE(instrpT)==0 && FUNC(instrpT) ==8)){
+		//			printf("hahah");
+		//		}
+				if(RS(instrpT) == CURRENT_STATE.EX_MEM_DEST || RT(instrpT) == CURRENT_STATE.EX_MEM_DEST){
+					CURRENT_STATE.IF_PC = CURRENT_STATE.PC;
+				}
+			}
 		}else{
 			CURRENT_STATE.PIPE[2] = 0;
 			CURRENT_STATE.EX_MEM_NPC = 0;
@@ -296,6 +317,7 @@ void EX_Stage(){
 
 void MEM_Stage(){
 
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 	if (CURRENT_STATE.EX_MEM_NPC - MEM_TEXT_START >= 4*NUM_INST) {
 		CURRENT_STATE.MEM_WB_NPC = CURRENT_STATE.EX_MEM_NPC;
 		CURRENT_STATE.PIPE[3] = 0;
@@ -346,6 +368,7 @@ void MEM_Stage(){
 }
 void WB_Stage(){
 	
+//	printf("current pc is: %x\n",CURRENT_STATE.PC);
 	if(CURRENT_STATE.MEM_WB_NPC!=0){
 		instruction* instrp; 
 		instrp = get_inst_info(CURRENT_STATE.MEM_WB_NPC);
