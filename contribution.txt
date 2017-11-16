@@ -1,0 +1,34 @@
+Contribution:
+Min Kim: 50
+Seunghun Koh: 50
+
+Chang Hyun Park (5):
+      Initial commit
+      Updates inputs/outputs and Makefile
+      Updates sammple outputs affected by BEQ/BNE behavior change
+      Updates the BEQ test input files
+      Fixes wrong output of example05
+
+Min Kim (11):
+      first try
+      IF, ID MEM WB
+      error fixing
+      Merge branch 'master' of ssh://cs311.kaist.ac.kr:10022/Team47/Project3
+      fixing errors
+      flush, forwarding and error fixing
+      stall
+      Final version
+      final
+      Merge branch 'master' of ssh://cs311.kaist.ac.kr:10022/TAs/Project3
+      example5 fixing
+
+Seunghun Koh (8):
+      Beginning
+      Basic work done
+      adjustments
+      Finally able to break the cycle
+      Merge branch 'master' of ssh://cs311.kaist.ac.kr:10022/Team47/Project3
+      Stall left to implement
+      Merge branch 'master' of ssh://cs311.kaist.ac.kr:10022/TAs/Project3
+      Merge branch 'master' of ssh://cs311.kaist.ac.kr:10022/Team47/Project3
+

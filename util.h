@@ -43,7 +43,7 @@ typedef struct CPU_State_Struct {
 	
 	uint32_t PIPE[PIPE_STAGE];	/* PC being executed at each stage*/
 	uint32_t PIPE_STALL[PIPE_STAGE];
-	
+
 	//IF_ID_latch
 	uint32_t IF_ID_INST;
 	uint32_t IF_ID_NPC;
